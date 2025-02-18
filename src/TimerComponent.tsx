@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 
 const TimerComponent = () => {
-    const [isRunning, setIsRunning] = useState(false);
-    const [time, setTime] = useState(0);
-    const [duration, setDuration] = useState(3600); // 60 seconds default
+    const [isRunning, setIsRunning] = useState<boolean>(false);
+    const [elapsedTime, setElapsedTime] = useState<number>(0);
+    const [totalDuration, setTotalDuration] = useState<number>(300);
+    const [hasCompleted, setHasCompleted] = useState<boolean>(false);
     const intervalRef = useRef<number>();
 
     useEffect(() => {
@@ -12,41 +13,59 @@ const TimerComponent = () => {
         };
     }, []);
 
-    const startTimer = () => {
-        if (!isRunning) {
-            setIsRunning(true);
+    useEffect(() => {
+        if (isRunning) {
             intervalRef.current = window.setInterval(() => {
-                setTime(prevTime => {
-                    if (prevTime >= duration) {
-                        stopTimer();
-                        return duration;
-                    }
-                    return prevTime + 1;
-                });
+                setElapsedTime(prevTime => prevTime + 1);
             }, 1000);
+        } else {
+            intervalRef.current !== undefined && clearInterval(intervalRef.current);
         }
-    };
+    }, [totalDuration, isRunning]);
 
-    const stopTimer = () => {
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            setIsRunning(false);
+    useEffect(() => {
+        if (totalDuration - elapsedTime <= 0) {
+            timerCompleted();
         }
-    };
+    }, [elapsedTime]);
+
+    useEffect(() => {
+        if (hasCompleted) {
+            console.log("fetch request to backend to update the time");
+        }
+    }, [hasCompleted]);
 
     const resetTimer = () => {
-        stopTimer();
-        setTime(0);
+        setIsRunning(false);
+        setElapsedTime(0);
     };
 
-    const progress = (time / duration) * 100;
-    const dashArray = 2 * Math.PI * 45; // Circle circumference
+    const timerCompleted = () => {
+        setHasCompleted(true);
+        resetTimer();
+    }
+
+    const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = Number(event.target.value);
+        if (!isNaN(value)) {
+            setTotalDuration(value);
+        }
+    };
+
+    const convertTime = (timeInSeconds: number) => {
+        const minutes = Math.floor(timeInSeconds / 60);
+        const seconds = timeInSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    };
+
+    const progress = (elapsedTime / totalDuration) * 100;
+    const dashArray = 2 * Math.PI * 45;
     const dashOffset = dashArray * ((100 - progress) / 100);
 
     return (
-        <div className="relative w-1/2 h-1/2 mx-auto my-auto">
-            <svg 
-                className="w-full h-full -rotate-90" 
+        <div className="flex flex-col items-center justify-center gap-4 relative w-1/4 h-1/4 mx-auto my-auto">
+            <svg
+                className="relative w-full h-full -rotate-90"
                 viewBox="0 0 100 100"
             >
                 <circle
@@ -62,32 +81,55 @@ const TimerComponent = () => {
                     r="45"
                     style={{
                         strokeDasharray: dashArray,
-                        strokeDashoffset: dashOffset,
+                        strokeDashoffset: dashOffset ?? 0,
                     }}
                 />
             </svg>
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-lg font-bold">
-                {Math.floor(time)}s / {duration}s
+                {convertTime(totalDuration - elapsedTime)}
             </div>
-            <div className="absolute -bottom-14 left-1/2 -translate-x-1/2 flex gap-2">
+            <div className="flex flex-col items-center top-14 left-1/2  w-full max-w-xs">
+                <input
+                    type="range"
+                    min="0"
+                    max="3600"
+                    value={totalDuration}
+                    onChange={handleInputChange}
+                    disabled={isRunning}
+                    className="w-3/4"
+                    step={300}
+                />
+                <input
+                    type="text"
+                    value={totalDuration}
+                    onChange={handleInputChange}
+                    disabled={isRunning}
+                    className="w-1/2 text-center"
+                    placeholder="Enter time"
+                />
+                <div className="text-sm text-gray-500">
+                    seconds
+                </div>
+            </div>
+            <div className="absolute -bottom-14 left-1/2 -translate-x-1/2 flex gap-4 w-full justify-center">
                 {!isRunning ? (
-                    <button 
-                        onClick={startTimer}
-                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                    <button
+                        onClick={() => setIsRunning(true)}
+                        className="w-1/4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                     >
                         Start
                     </button>
                 ) : (
-                    <button 
-                        onClick={stopTimer}
-                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                    <button
+                        onClick={() => setIsRunning(false)}
+                        className="w-1/4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                     >
                         Stop
                     </button>
                 )}
-                <button 
+                <button
                     onClick={resetTimer}
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                    className="w-1/4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                 >
                     Reset
                 </button>

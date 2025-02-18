@@ -2,7 +2,9 @@ import TimerComponent from './TimerComponent';
 
 const App = () => {
   return (
-    <TimerComponent />
+    <div className="flex flex-col items-center justify-center h-screen">
+      <TimerComponent />
+    </div>
   );
 };
 
